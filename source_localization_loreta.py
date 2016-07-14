@@ -40,6 +40,9 @@ baseline = (None, 0) # means from the first instant to t = 0
 epochs = mne.Epochs(raw, events_trig_on, event_id, tmin, tmax, proj=True, baseline=baseline, preload=False)
 
 evoked = epochs.average()
-evoked.plot_topomap(times=np.linspace(0.00, 0.5, 10), ch_type='eeg')
+#evoked.plot_topomap(times=np.linspace(0.00, 0.5, 10), ch_type='eeg')
+
+noise_cov = mne.compute_covariance(epochs, tmax=0., method=['shrunk', 'empirical'])
+fig_cov, fig_spectra = mne.viz.plot_cov(noise_cov, raw.info)
 
 
