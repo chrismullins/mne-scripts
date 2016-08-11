@@ -33,6 +33,12 @@ with open(op.join(datadir, montage_file), 'rt') as csvfile:
 tms_montage = mne.channels.Montage(pos=montage_positions, ch_names=montage_chnames, kind='TMS Montage', selection=np.arange(1,62))
 dig_montage = digmontage = mne.channels.DigMontage(hsp=montage_positions, point_names=montage_chnames, hpi=np.zeros((0,3)), elp=np.zeros((0,3)))
 
+# Calculate the centroid of all points in montage
+x_pos = [p[1] for p in montage_positions]
+y_pos = [p[0] for p in montage_positions]
+z_pos = [p[2] for p in montage_positions]
+montage_centroid = np.array([sum(x_pos) / len(x_pos), sum(y_pos) / len(y_pos), sum(z_pos) / len(z_pos)])
+
 # Now read the edf file which is preprocessed by Ryan Downey
 raw_edf = mne.io.read_raw_edf(op.join(datadir, edf), preload=True, stim_channel=62)
 
@@ -58,7 +64,10 @@ evoked = epochs.average()
 evoked.set_montage(dig_montage)
 #evoked.plot_topomap(times=np.linspace(0.00, 0.5, 10), ch_type='eeg')
 
-sphere_model = mne.bem.make_sphere_model(r0 = 'auto', head_radius = 'auto', info=evoked.info)
+#sphere_model = mne.bem.make_sphere_model(r0 = 'auto', head_radius = 'auto', info=evoked.info)
+# Using 'auto' sets the head radius to 85 meters, center to god-knows-what
+# TODO: This should be more principled, for now just use average head size
+sphere_model = mne.bem.make_sphere_model(r0 = montage_centroid, head_radius = 177, info=evoked.info)
 
 #times = np.linspace(tmin, tmax, evoked.data.shape[1])
 #evoked.plot()
@@ -75,6 +84,8 @@ sphere_model = mne.bem.make_sphere_model(r0 = 'auto', head_radius = 'auto', info
 from mne.datasets import sample
 mne_data_path = sample.data_path()
 #source_space = mne.setup_source_space(subject='fsaverage', spacing='oct6', subjects_dir=op.join(mne_data_path, 'subjects')) 
+# TODO: Should look more like this:
+# source_space = mne.read_source_spaces(fname=op.join(mne_data_path, 'subjects/fsaverage/bem/fsaverage-ico-5-src.fif'))
 source_space = mne.read_source_spaces(fname='/home/chris/projects/nme-python/mne-venv2/lib/python2.7/site-packages/examples/MNE-sample-data/subjects/fsaverage/bem/fsaverage-oct-6-src.fif')
 fwd_model = mne.make_forward_solution(info=evoked.info, src=source_space, bem=sphere_model, eeg=True, meg=False, trans=None)
 cov = mne.compute_covariance(epochs, tmax=0)
